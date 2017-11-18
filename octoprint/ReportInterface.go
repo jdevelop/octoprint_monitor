@@ -3,15 +3,25 @@ package octoprint
 import (
 	"fmt"
 	"github.com/jdevelop/golang-rpi-extras/lcd_hd44780"
+	"time"
 )
 
 type Report interface {
 	Render(printerState TPrinterStatus, progress *TProgress)
+	Welcome()
 }
 
 type localConsole int
 
-const format = "%dm of %dm"
+const format = "%s / %s"
+
+func fmtDuration(d time.Duration) string {
+	d = d.Round(time.Minute)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	return fmt.Sprintf("%02d:%02d", h, m)
+}
 
 func (c *localConsole) Render(printerState TPrinterStatus, progress *TProgress) {
 	switch printerState {
@@ -25,8 +35,16 @@ func (c *localConsole) Render(printerState TPrinterStatus, progress *TProgress) 
 		fmt.Println("Unknown")
 	}
 	if progress != nil {
-		fmt.Printf(format+"\n", progress.PrintTime/60, progress.PrintTimeLeft/60)
+		fmt.Printf(format+"\n",
+			fmtDuration(time.Duration(progress.PrintTime)*time.Second),
+			fmtDuration(time.Duration(progress.PrintTimeLeft)*time.Second),
+		)
 	}
+}
+
+func (c *localConsole) Welcome() {
+	fmt.Println("    OctoPrint   ")
+	fmt.Println(" Status Monitor ")
 }
 
 type localLCD struct {
@@ -42,15 +60,26 @@ func (l *localLCD) Render(printerState TPrinterStatus, progress *TProgress) {
 	case PrinterFailed:
 		l.l.Print("Dead")
 	case Printing:
-		l.l.Print(fmt.Sprintf("Printing %.1f%%\n", progress.Completion))
+		l.l.Print(fmt.Sprintf("Printing %.1f%%", progress.Completion))
 	default:
 		l.l.Print("Unknown")
 	}
 	l.l.SetCursor(1, 0)
 	if progress != nil {
-		str := fmt.Sprintf(format, progress.PrintTime/60, progress.PrintTimeLeft/60)
+		str := fmt.Sprintf(format,
+			fmtDuration(time.Duration(progress.PrintTime)*time.Second),
+			fmtDuration(time.Duration(progress.PrintTimeLeft)*time.Second),
+		)
 		l.l.Print(str)
 	}
+}
+
+func (l *localLCD) Welcome() {
+	l.l.Cls()
+	l.l.SetCursor(0, 0)
+	l.l.Print("    OctoPrint   ")
+	l.l.SetCursor(1, 0)
+	l.l.Print(" Status Monitor ")
 }
 
 func MakeLCD(dataPins []int, resetPin int, strobePin int) (r Report, err error) {

@@ -8,12 +8,18 @@ import (
 
 type Report interface {
 	Render(printerState TPrinterStatus, progress *TProgress)
-	Welcome()
+	Welcome(v *ApiVersion)
 }
 
 type localConsole int
 
-const format = "%s / %s"
+const (
+	format             = "%s / %s"
+	IdleStatus         = "Idle"
+	DisconnectedStatus = "Disconnected"
+	UnknownStatus      = "Unknown"
+	PrintingStatus     = "Printing %.1f%%"
+)
 
 func fmtDuration(d time.Duration) string {
 	d = d.Round(time.Minute)
@@ -26,13 +32,13 @@ func fmtDuration(d time.Duration) string {
 func (c *localConsole) Render(printerState TPrinterStatus, progress *TProgress) {
 	switch printerState {
 	case PrinterOk:
-		fmt.Println("Idle")
+		fmt.Println(IdleStatus)
 	case PrinterFailed:
-		fmt.Println("Dead")
+		fmt.Println(DisconnectedStatus)
 	case Printing:
-		fmt.Printf("Printing %.1f%%\n", progress.Completion)
+		fmt.Printf(PrintingStatus+"\n", progress.Completion)
 	default:
-		fmt.Println("Unknown")
+		fmt.Println(UnknownStatus)
 	}
 	if progress != nil {
 		fmt.Printf(format+"\n",
@@ -42,8 +48,12 @@ func (c *localConsole) Render(printerState TPrinterStatus, progress *TProgress) 
 	}
 }
 
-func (c *localConsole) Welcome() {
-	fmt.Println("    OctoPrint   ")
+func (c *localConsole) Welcome(v *ApiVersion) {
+	if v == nil {
+		fmt.Println("    OctoPrint   ")
+	} else {
+		fmt.Printf("OctoPrint %s\n", v.ServerVersion)
+	}
 	fmt.Println(" Status Monitor ")
 }
 
@@ -56,13 +66,13 @@ func (l *localLCD) Render(printerState TPrinterStatus, progress *TProgress) {
 	l.l.SetCursor(0, 0)
 	switch printerState {
 	case PrinterOk:
-		l.l.Print("Idle")
+		l.l.Print(IdleStatus)
 	case PrinterFailed:
-		l.l.Print("Dead")
+		l.l.Print(DisconnectedStatus)
 	case Printing:
-		l.l.Print(fmt.Sprintf("Printing %.1f%%", progress.Completion))
+		l.l.Print(fmt.Sprintf(PrintingStatus, progress.Completion))
 	default:
-		l.l.Print("Unknown")
+		l.l.Print(UnknownStatus)
 	}
 	l.l.SetCursor(1, 0)
 	if progress != nil {
@@ -74,10 +84,14 @@ func (l *localLCD) Render(printerState TPrinterStatus, progress *TProgress) {
 	}
 }
 
-func (l *localLCD) Welcome() {
+func (l *localLCD) Welcome(v *ApiVersion) {
 	l.l.Cls()
 	l.l.SetCursor(0, 0)
-	l.l.Print("    OctoPrint   ")
+	if v != nil {
+		l.l.Print(fmt.Sprintf("OctoPrint %s", v.ServerVersion))
+	} else {
+		l.l.Print("    OctoPrint")
+	}
 	l.l.SetCursor(1, 0)
 	l.l.Print(" Status Monitor ")
 }

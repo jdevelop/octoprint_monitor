@@ -9,6 +9,7 @@ const (
 )
 
 type PrinterStatus interface {
+	GetVersionInfo() (*ApiVersion, error)
 	GetPrinterStatus() (TPrinterStatus, error)
 	GetProgress() (*TProgress, error)
 }

@@ -67,12 +67,35 @@ type JobResponse struct {
 	State    string    `json:"state"`
 }
 
+type ApiVersion struct {
+	Api           string `json:"api"`
+	ServerVersion string `json:"server"`
+}
+
 func (o *octoprint) request(url string) (req *http.Request, err error) {
 	req, err = http.NewRequest("GET", o.url+url, nil)
 	if err != nil {
 		return
 	}
 	req.Header.Add("X-Api-Key", o.apiKey)
+	return
+}
+
+func (o *octoprint) GetVersionInfo() (v *ApiVersion, err error) {
+	req, err := o.request("/api/version")
+	resp, err := o.httpClient.Do(req)
+	if err != nil {
+		return
+	}
+	v = &ApiVersion{}
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(data, v)
+	if err != nil {
+		return
+	}
 	return
 }
 

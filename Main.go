@@ -33,7 +33,7 @@ func main() {
 		ApiKey  string        `mapstructure:"apikey"`
 		Url     string        `mapstructure:"url"`
 		Refresh time.Duration `mapstructure:"refresh"`
-		PiLCD struct {
+		PiLCD   struct {
 			Rs   int   `mapstructure:"rs"`
 			E    int   `mapstructure:"e"`
 			Data []int `mapstructure:"data"`
@@ -76,7 +76,13 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	report.Welcome()
+	status, err := op.GetVersionInfo()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	report.Welcome(status)
 
 	onTick := func() {
 		for range ticker {
@@ -86,6 +92,7 @@ func main() {
 			if err1 == nil && err2 == nil {
 				report.Render(s, p)
 			} else {
+				report.Welcome(status)
 				fmt.Println(err1, err2)
 			}
 
